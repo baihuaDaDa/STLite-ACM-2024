@@ -289,7 +289,7 @@ namespace sjtu {
     private:
         iterator _begin;
         iterator _end;
-        std::allocator<T> alloc;
+        Alloc alloc;
         size_t _size;
         size_t _storage;
 
