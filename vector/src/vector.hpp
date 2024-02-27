@@ -289,7 +289,6 @@ namespace sjtu {
     private:
         iterator _begin;
         iterator _end;
-        iterator _end_of_storage;
         std::allocator<T> alloc;
         size_t _size;
         size_t _storage;
@@ -301,14 +300,13 @@ namespace sjtu {
          */
         vector() : _size(0), _storage(0) {
             T *ptr = alloc.allocate(1);
-            _begin = _end = _end_of_storage = iterator(ptr, this);
+            _begin = _end = iterator(ptr, this);
         }
 
         vector(const vector &other) : _size(other._size), _storage(other._storage) {
             T *ptr = alloc.allocate(_storage + 1);
             _begin = iterator(ptr, this);
             _end = iterator(ptr + _size, this);
-            _end_of_storage = iterator(ptr + _storage, this);
             for (size_t i = 0; i < _size; i++) {
                 std::construct_at(ptr + i, other[i]);
             }
@@ -334,10 +332,10 @@ namespace sjtu {
             T *ptr = alloc.allocate(_storage + 1);
             _begin = iterator(ptr, this);
             _end = iterator(ptr + _size, this);
-            _end_of_storage = iterator(ptr + _storage, this);
             for (size_t i = 0; i < _size; i++) {
                 std::construct_at(ptr + i, other[i]);
             }
+            return *this;
         }
 
         /**
@@ -361,10 +359,12 @@ namespace sjtu {
          *   In STL this operator does not check the boundary but I want you to do.
          */
         T &operator[](const size_t &pos) {
+            if (pos < 0 || pos >= _size) throw index_out_of_bound();
             return at(pos);
         }
 
         const T &operator[](const size_t &pos) const {
+            if (pos < 0 || pos >= _size) throw index_out_of_bound();
             return at(pos);
         }
 
@@ -431,7 +431,6 @@ namespace sjtu {
             _size = 0;
             _storage = 0;
             T *ptr = alloc.allocate(1);
-            _end = _end_of_storage = _begin = iterator(ptr, this);
         }
 
         /**
@@ -440,7 +439,7 @@ namespace sjtu {
          */
         iterator insert(iterator pos, const T &value) {
             if (_size == _storage) {
-                T *new_ptr = alloc.allocate(2 * _storage + 1);
+                T *new_ptr = alloc.allocate((_storage == 0 ? 2 : 2 * _storage + 1));
                 for (size_t i = 0; i < pos - _begin; i++) {
                     std::construct_at(new_ptr + i, at(i));
                 }
@@ -450,11 +449,11 @@ namespace sjtu {
                 pos = iterator(std::construct_at(new_ptr + (pos - _begin), value), this);
                 std::destroy(_begin, _end);
                 alloc.deallocate(_begin.GetPointer(), _storage + 1);
-                _storage *= 2;
+                if (_storage == 0) _storage = 1;
+                else _storage *= 2;
                 _size++;
                 _begin = iterator(new_ptr, this);
                 _end = iterator(new_ptr + _size, this);
-                _end_of_storage = iterator(new_ptr + _storage, this);
             } else {
                 std::construct_at(_begin.GetPointer() + _size, at(_size - 1));
                 for (size_t i = _size - 1; i >= pos - _begin + 1; i--) {
@@ -474,8 +473,9 @@ namespace sjtu {
          * throw index_out_of_bound if ind > size (in this situation ind can be size because after inserting the size will increase 1.)
          */
         iterator insert(const size_t &ind, const T &value) {
+            if (ind > _size) throw index_out_of_bound();
             if (_size == _storage) {
-                T *new_ptr = alloc.allocate(2 * _storage + 1);
+                T *new_ptr = alloc.allocate((_storage == 0 ? 2 : 2 * _storage + 1));
                 for (size_t i = 0; i < ind; i++) {
                     std::construct_at(new_ptr + i, at(i));
                 }
@@ -485,11 +485,11 @@ namespace sjtu {
                 std::construct_at(new_ptr + ind, value);
                 std::destroy(_begin, _end);
                 alloc.deallocate(_begin.GetPointer(), _storage + 1);
-                _storage *= 2;
+                if (_storage == 0) _storage = 1;
+                else _storage *= 2;
                 _size++;
                 _begin = iterator(new_ptr, this);
                 _end = iterator(new_ptr + _size, this);
-                _end_of_storage = iterator(new_ptr + _storage, this);
             } else {
                 std::construct_at(_begin.GetPointer() + _size, at(_size - 1));
                 for (size_t i = _size - 1; i >= ind + 1; i--) {
@@ -509,7 +509,7 @@ namespace sjtu {
          */
         iterator erase(iterator pos) {
             if (pos == _end) return _end;
-            if (_storage == 2 * (_size - 1)) {
+            if (_storage / 2 == _size - 1) {
                 T *new_ptr = alloc.allocate(_storage / 2 + 1);
                 for (size_t i = 0 ; i < pos - _begin; i++) {
                     std::construct_at(new_ptr + i, at(i));
@@ -524,7 +524,6 @@ namespace sjtu {
                 _size--;
                 _begin = iterator(new_ptr, this);
                 _end = iterator(new_ptr + _size, this);
-                _end_of_storage = iterator(new_ptr + _storage, this);
                 pos = _begin + ind;
             } else {
                 for (size_t i = pos - _begin; i < _size - 1; i++) {
@@ -558,7 +557,6 @@ namespace sjtu {
                 _size--;
                 _begin = iterator(new_ptr, this);
                 _end = iterator(new_ptr + _size, this);
-                _end_of_storage = iterator(new_ptr + _storage, this);
             } else {
                 for (size_t i = ind; i < _size - 1; i++) {
                     at(i) = at(i + 1);
@@ -582,6 +580,7 @@ namespace sjtu {
          * throw container_is_empty if size() == 0
          */
         void pop_back() {
+            if (_size == 0) throw container_is_empty();
             erase(_end - 1);
         }
     };
