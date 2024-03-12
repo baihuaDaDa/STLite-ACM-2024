@@ -137,6 +137,7 @@ namespace sjtu {
          * clear the other priority_queue.
          */
         void merge(priority_queue &other) {
+            if (&other == this) return;
             root = merge(root, other.root);
             _size += other._size;
             other.root = nullptr;
