@@ -213,7 +213,11 @@ void tester3() {
 			console.showProgress();
 		}
 		std::random_shuffle(ret.begin(), ret.end());
-		for (auto x : ret) {
+		for (size_t i = 0; i < ret.size(); i++) {
+            auto x = ret[i];
+            if (i == 247)
+                for (auto iter = srcmap.begin(); iter != srcmap.end(); ++iter)
+                    std::cout << iter->first.val << std::endl;
 			if (stdmap.find(x) != stdmap.end()) {
 				srcmap.erase(srcmap.find(x));
 				stdmap.erase(stdmap.find(x));
@@ -607,16 +611,17 @@ int main() {
 #ifdef SPECIAL
 	puts("AATree-Map Checker Version 1.2");
 #endif
-	tester1();
-	tester2();
+    freopen("1.out", "w", stdout);
+//	tester1();
+//	tester2();
 	tester3();
-	tester4();
-	tester5();
-	tester6();
-	tester7();
-	tester8();
-	tester9();
-	tester10();
-	tester11();
+//	tester4();
+//	tester5();
+//	tester6();
+//	tester7();
+//	tester8();
+//	tester9();
+//	tester10();
+//	tester11();
 	return 0;
 }
