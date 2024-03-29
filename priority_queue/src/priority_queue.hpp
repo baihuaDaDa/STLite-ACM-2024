@@ -101,7 +101,6 @@ namespace sjtu {
             } catch (...) {
                 delete new_node;
             }
-
         }
 
         /**
