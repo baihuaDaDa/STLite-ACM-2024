@@ -61,6 +61,8 @@ namespace sjtu {
         Node *root;
         size_t _size;
 
+        // delete之后由于还有可能调用，需要将被delete的node置成nullptr
+
         Node *BuildTree(const Node *const &other, Node *father) {
             if (other == nullptr) return nullptr;
             Node *node = new Node(other->data, other->height);
@@ -80,6 +82,10 @@ namespace sjtu {
         size_t Height(const Node *const &node) const {
             return node == nullptr ? 0 : node->height;
         }
+
+        // 在接下来的rotate、insert和remove操作中，可能会对根节点有修改，需要同步修改map类中的成员root
+        // 为了防止搞不清同步改了什么指针，我选择避免使用引用而直接传递值，在函数内另外修改对应的三叉链表的三条双向边
+        // 有时候可能会访问到根节点，而根节点的父节点是nullptr，这时需要特判
 
         void LL(Node *node) {
             if (node->father != nullptr) {
@@ -123,6 +129,8 @@ namespace sjtu {
             RR(node);
         }
 
+        // 小小疑问：为什么在调试过程中发现这里的node被旋转之后会自己改成新的根节点？明明这里的rotate函数时值传递啊
+
         iterator Insert(const value_type &elem, Node *&node, Node *const &father, bool subtree) {
             iterator ret;
             if (node == nullptr) {
@@ -151,6 +159,8 @@ namespace sjtu {
             node->height = std::max(Height(node->left), Height(node->right)) + 1;
             return ret;
         }
+
+        // 这里需要同步修改node，因为在remove函数中node可能会在adjust之后被用到
 
         bool Adjust(Node *&node, bool subtree) {
             if (subtree) {
@@ -186,6 +196,8 @@ namespace sjtu {
             }
         }
 
+        // 感觉可以写的更好看一点，在Node里存一个左右子树tag
+
         bool Remove(const Key &key, Node *node) {
             bool ret;
             if (node == nullptr) return true;
@@ -218,6 +230,7 @@ namespace sjtu {
                     delete to_be_deleted;
                     ret = false;
                 } else {
+                    // 这里要注意除了被删除的元素对应的迭代器，其他迭代器在删除之后不受影响，所以所有元素的地址不能变化，也就是说不能新建node
                     --_size;
                     Node *tmp = node->right;
                     while (tmp->left != nullptr)
