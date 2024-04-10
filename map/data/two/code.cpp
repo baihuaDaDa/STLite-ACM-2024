@@ -70,6 +70,10 @@ public:
 	friend bool operator < (const IntA &lhs, const IntA &rhs) {
 		return lhs.val > rhs.val;
 	}
+    friend std::ostream &operator<<(std::ostream &out, const IntA &value) {
+        out << value.val;
+        return out;
+    }
 	
 	~IntA() {
 		counter--;
@@ -201,7 +205,16 @@ void tester2() {
 void tester3() {
 	TestCore console("Deletion & Find function testing...", 3, 2 * MAXN);
 	console.init();
+//    std::cout << std::endl;
 	auto ret = generator(MAXN);
+//    int arr[32];
+//    for (int i = 0; i < (int)ret.size(); i++)
+//        arr[i] = ret[i];
+//    std::sort(arr, arr + 32);
+//    for (int i = 0; i < 32; i++)
+//        for (int j = 0; j < 32; j++)
+//            if (arr[j] == ret[i])
+//                ret[i] = j + 1;
 	try{
 		std::map<IntA, IntB, Compare> stdmap;
 		sjtu::map<IntA, IntB, Compare> srcmap;
@@ -213,13 +226,15 @@ void tester3() {
 			console.showProgress();
 		}
 		std::random_shuffle(ret.begin(), ret.end());
+//        for (int i = 0; i < 32; i++)
+//            std::cout << ret[i] << ' ';
+//        std::cout << std::endl;
+//        srcmap.traverse();
 		for (size_t i = 0; i < ret.size(); i++) {
             auto x = ret[i];
-            if (i == 247)
-                for (auto iter = srcmap.begin(); iter != srcmap.end(); ++iter)
-                    std::cout << iter->first.val << std::endl;
 			if (stdmap.find(x) != stdmap.end()) {
 				srcmap.erase(srcmap.find(x));
+//                srcmap.traverse();
 				stdmap.erase(stdmap.find(x));
 			}
 			for (int c = 0; c < 10; c++) {
@@ -612,16 +627,16 @@ int main() {
 	puts("AATree-Map Checker Version 1.2");
 #endif
     freopen("1.out", "w", stdout);
-//	tester1();
-//	tester2();
+	tester1();
+	tester2();
 	tester3();
-//	tester4();
-//	tester5();
-//	tester6();
-//	tester7();
-//	tester8();
-//	tester9();
-//	tester10();
-//	tester11();
+	tester4();
+	tester5();
+	tester6();
+	tester7();
+	tester8();
+	tester9();
+	tester10();
+	tester11();
 	return 0;
 }

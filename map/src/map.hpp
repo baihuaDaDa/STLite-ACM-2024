@@ -7,6 +7,7 @@
 // only for std::less<T>
 #include <functional>
 #include <cstddef>
+//#include <queue>
 #include "utility.hpp"
 #include "exceptions.hpp"
 
@@ -54,7 +55,7 @@ namespace sjtu {
                                                           right(nullptr), father(_father) {}
 
             Node(const value_type &elem, size_t _height, Node *_left, Node *_right, Node *_father)
-                 : data(elem), height(_height), left(_left), right(_right), father(_father) {}
+                    : data(elem), height(_height), left(_left), right(_right), father(_father) {}
         };
 
         Node *root;
@@ -74,14 +75,17 @@ namespace sjtu {
             Clear(node->left);
             Clear(node->right);
             delete node;
-            node = nullptr;
         }
 
         size_t Height(const Node *const &node) const {
             return node == nullptr ? 0 : node->height;
         }
 
-        void LL(Node *&node) {
+        void LL(Node *node) {
+            if (node->father != nullptr) {
+                if (node->father->left == node) node->father->left = node->left;
+                else node->father->right = node->left;
+            } else root = node->left;
             Node *_right = node;
             node = node->left;
             node->father = _right->father;
@@ -89,11 +93,15 @@ namespace sjtu {
             if (node->right != nullptr) node->right->father = _right;
             _right->father = node;
             node->right = _right;
-            _right->height = std::max(Height(_right->left), Height(_right->left)) + 1;
+            _right->height = std::max(Height(_right->left), Height(_right->right)) + 1;
             node->height = std::max(Height(node->left), Height(_right)) + 1;
         }
 
-        void RR(Node *&node) {
+        void RR(Node *node) {
+            if (node->father != nullptr) {
+                if (node->father->left == node) node->father->left = node->right;
+                else node->father->right = node->right;
+            } else root = node->right;
             Node *_left = node;
             node = node->right;
             node->father = _left->father;
@@ -105,31 +113,35 @@ namespace sjtu {
             node->height = std::max(Height(node->right), Height(_left)) + 1;
         }
 
-        void LR(Node *&node) {
+        void LR(Node *node) {
             RR(node->left);
             LL(node);
         }
 
-        void RL(Node *&node) {
+        void RL(Node *node) {
             LL(node->right);
             RR(node);
         }
 
-        iterator Insert(const value_type &elem, Node *&node, Node *const &father) {
+        iterator Insert(const value_type &elem, Node *&node, Node *const &father, bool subtree) {
             iterator ret;
             if (node == nullptr) {
                 node = new Node(elem, father);
+                if (father != nullptr) {
+                    if (subtree) father->right = node;
+                    else father->left = node;
+                }
                 _size++;
                 ret = iterator(node, this);
             } else if (Compare()(node->data.first, elem.first)) {
-                ret = Insert(elem, node->right, node);
+                ret = Insert(elem, node->right, node, true);
                 if (Height(node->right) - Height(node->left) == 2) {
                     if (Height(node->right->left) < Height(node->right->right))
                         RR(node);
                     else RL(node);
                 }
             } else if (Compare()(elem.first, node->data.first)) {
-                ret = Insert(elem, node->left, node);
+                ret = Insert(elem, node->left, node, false);
                 if (Height(node->left) - Height(node->right) == 2) {
                     if (Height(node->left->left) < Height(node->left->right))
                         LR(node);
@@ -149,9 +161,11 @@ namespace sjtu {
                 }
                 if (Height(node->left->right) > Height(node->left->left)) {
                     LR(node);
+                    node = node->father;
                     return false;
                 }
                 LL(node);
+                node = node->father;
                 if (Height(node->left) == Height(node->right)) return false;
                 else return true;
             } else {
@@ -162,22 +176,25 @@ namespace sjtu {
                 }
                 if (Height(node->right->left) > Height(node->right->right)) {
                     RL(node);
+                    node = node->father;
                     return false;
                 }
                 RR(node);
+                node = node->father;
                 if (Height(node->left) == Height(node->right)) return false;
                 else return true;
             }
         }
 
-        bool Remove(const Key &key, Node *&node) {
+        bool Remove(const Key &key, Node *node) {
+            bool ret;
             if (node == nullptr) return true;
             if (Compare()(key, node->data.first)) {
-                if (Remove(key, node->left)) return true;
-                return Adjust(node, false);
+                if (Remove(key, node->left)) ret = true;
+                else ret = Adjust(node, false);
             } else if (Compare()(node->data.first, key)) {
-                if (Remove(key, node->right)) return true;
-                return Adjust(node, true);
+                if (Remove(key, node->right)) ret = true;
+                else ret = Adjust(node, true);
             } else {
                 if (node->left == nullptr && node->right == nullptr) {
                     _size--;
@@ -193,23 +210,55 @@ namespace sjtu {
                     _size--;
                     Node *to_be_deleted = node;
                     node = (node->left == nullptr) ? node->right : node->left;
+                    if (to_be_deleted->father != nullptr) {
+                        if (to_be_deleted->father->left == to_be_deleted) to_be_deleted->father->left = node;
+                        else to_be_deleted->father->right = node;
+                    } else root = node;
                     node->father = to_be_deleted->father;
                     delete to_be_deleted;
-                    return false;
+                    ret = false;
                 } else {
+                    --_size;
                     Node *tmp = node->right;
                     while (tmp->left != nullptr)
                         tmp = tmp->left;
-                    Node *updated_node = new Node(tmp->data, node->height, node->left, node->right, node->father);
+                    bool lr = (tmp->father->left != tmp);
+                    if (tmp->right == nullptr) {
+                        if (!lr) tmp->father->left = nullptr;
+                        else tmp->father->right = nullptr;
+                    } else {
+                        tmp->right->father = tmp->father;
+                        if (!lr) tmp->father->left = tmp->right;
+                        else tmp->father->right = tmp->right;
+                    }
+                    Node *to_be_adjusted = (tmp->father != node) ? tmp->father : tmp;
+                    if (node->father != nullptr) {
+                        if (node->father->left == node) node->father->left = tmp;
+                        else node->father->right = tmp;
+                    }
+                    tmp->father = node->father;
+                    tmp->left = node->left;
+                    tmp->right = node->right;
+                    tmp->height = node->height;
+                    node->left->father = tmp;
+                    if (node->right != nullptr) node->right->father = tmp;
                     delete node;
-                    node = updated_node;
-                    node->left->father = node;
-                    node->right->father = node;
-                    if (Remove(tmp->data.first, node->right))
-                        return true;
-                    return Adjust(node, true);
+                    while (to_be_adjusted != tmp) {
+                        if (Adjust(to_be_adjusted, lr)) {
+                            ret = true;
+                            break;
+                        }
+                        lr = to_be_adjusted->father->left != to_be_adjusted;
+                        to_be_adjusted = to_be_adjusted->father;
+                    }
+                    if (to_be_adjusted == tmp)
+                        ret = Adjust(tmp, true);
+                    node = tmp;
+                    if (node->father == nullptr) root = node;
                 }
             }
+            node->height = std::max(Height(node->right), Height(node->left)) + 1;
+            return ret;
         }
 
     public:
@@ -289,7 +338,7 @@ namespace sjtu {
                 if (node->left == nullptr) {
                     while (node->father != nullptr && node->father->left == node)
                         node = node->father;
-                    if (node->father != nullptr)  {
+                    if (node->father != nullptr) {
                         node = node->father;
                         return *this;
                     } else throw invalid_iterator();
@@ -422,7 +471,7 @@ namespace sjtu {
                 if (node->left == nullptr) {
                     while (node->father != nullptr && node->father->left == node)
                         node = node->father;
-                    if (node->father != nullptr)  {
+                    if (node->father != nullptr) {
                         node = node->father;
                         return *this;
                     } else throw invalid_iterator();
@@ -476,10 +525,13 @@ namespace sjtu {
         map() : root(nullptr), _size(0) {}
 
         map(const map &other) : _size(other._size) {
-            root = new Node(other.root->data, nullptr);
-            root->height = other.root->height;
-            root->left = BuildTree(other.root->left, root);
-            root->right = BuildTree(other.root->right, root);
+            if (other.root == nullptr) root = nullptr;
+            else {
+                root = new Node(other.root->data, nullptr);
+                root->height = other.root->height;
+                root->left = BuildTree(other.root->left, root);
+                root->right = BuildTree(other.root->right, root);
+            }
         }
 
         /**
@@ -489,10 +541,13 @@ namespace sjtu {
             if (&other == this) return *this;
             Clear(root);
             _size = other._size;
-            root = new Node(other.root->data, nullptr);
-            root->height = other.root->height;
-            root->left = BuildTree(other.root->left, root);
-            root->right = BuildTree(other.root->right, root);
+            if (other.root == nullptr) root = nullptr;
+            else {
+                root = new Node(other.root->data, nullptr);
+                root->height = other.root->height;
+                root->left = BuildTree(other.root->left, root);
+                root->right = BuildTree(other.root->right, root);
+            }
             return *this;
         }
 
@@ -594,6 +649,7 @@ namespace sjtu {
          */
         void clear() {
             Clear(root);
+            root = nullptr;
             _size = 0;
         }
 
@@ -605,7 +661,7 @@ namespace sjtu {
          */
         pair<iterator, bool> insert(const value_type &value) {
             size_t origin = _size;
-            iterator iter = Insert(value, root, nullptr);
+            iterator iter = Insert(value, root, nullptr, false);
             return (origin == _size) ? pair<iterator, bool>(iter, false) : pair<iterator, bool>(iter, true);
         }
 
@@ -656,6 +712,29 @@ namespace sjtu {
             }
             return const_iterator(nullptr, this);
         }
+
+//        void traverse() {
+//            std::queue<Node *> queue;
+//            queue.push(root);
+//            std::cout << (root == nullptr ? 0 : root->data.first) << ' ';
+//            if (root == nullptr) queue.pop();
+//            while (!queue.empty()) {
+//                Node *tmp = queue.front();
+//                queue.pop();
+//                if (tmp->left == nullptr) std::cout << 0 << ' ';
+//                else {
+//                    std::cout << tmp->left->data.first << ' ' << tmp->left->height << ' ';
+//                    queue.push(tmp->left);
+//                }
+//                if (tmp->right == nullptr) std::cout << 0 << ' ';
+//                else {
+//                    std::cout << tmp->right->data.first << ' ' << tmp->right->height << ' ';
+//                    queue.push(tmp->right);
+//                }
+//
+//            }
+//            std::cout << std::endl;
+//        }
     };
 
 }

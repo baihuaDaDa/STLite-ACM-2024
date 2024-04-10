@@ -114,6 +114,7 @@ void tester(void) {
 }
 
 int main(void) {
+    freopen("1.out", "w", stdout);
 	tester();
 	std::cout << Integer::counter << std::endl;
 }
