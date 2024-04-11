@@ -62,7 +62,7 @@ namespace sjtu {
         size_t _size;
         iterator _begin;
         iterator _end;
-        iterator __end;
+        iterator _end_;
 
         // delete之后由于还有可能调用，需要将被delete的node置成nullptr
 
@@ -349,7 +349,7 @@ namespace sjtu {
                 if (node == nullptr) {
                     if (tag->empty()) throw invalid_iterator();
                     else {
-                        node = tag->__end.node;
+                        node = tag->_end_.node;
                         return *this;
                     }
                 }
@@ -480,7 +480,7 @@ namespace sjtu {
                 if (node == nullptr) {
                     if (tag->empty()) throw invalid_iterator();
                     else {
-                        node = tag->__end.node;
+                        node = tag->_end_.node;
                         return *this;
                     }
                 }
@@ -538,23 +538,24 @@ namespace sjtu {
         /**
          * TODO two constructors
          */
-        map() : root(nullptr), _size(0), _begin(iterator(nullptr, this)), __end(iterator(nullptr, this)), _end(iterator(nullptr, this)) {}
+        map() : root(nullptr), _size(0), _begin(iterator(nullptr, this)), _end_(iterator(nullptr, this)), _end(iterator(nullptr, this)) {}
 
         map(const map &other) : _size(other._size), _end(iterator(nullptr, this)) {
             if (other.root == nullptr) {
                 root = nullptr;
-                _begin = __end = iterator(nullptr, this);
+                _begin = _end_ = iterator(nullptr, this);
             } else {
                 root = new Node(other.root->data, nullptr);
                 root->height = other.root->height;
                 root->left = BuildTree(other.root->left, root);
                 root->right = BuildTree(other.root->right, root);
+                _begin.tag = _end_.tag = this;
                 _begin.node = root;
                 while (_begin.node->left != nullptr)
                     _begin.node = _begin.node->left;
-                __end.node = root;
-                while (__end.node->right != nullptr)
-                    __end.node = __end.node->right;
+                _end_.node = root;
+                while (_end_.node->right != nullptr)
+                    _end_.node = _end_.node->right;
             }
         }
 
@@ -567,7 +568,7 @@ namespace sjtu {
             _size = other._size;
             if (other.root == nullptr) {
                 root = nullptr;
-                _begin = __end = iterator(nullptr, this);
+                _begin = _end_ = iterator(nullptr, this);
             }
             else {
                 root = new Node(other.root->data, nullptr);
@@ -577,9 +578,9 @@ namespace sjtu {
                 _begin.node = root;
                 while (_begin.node->left != nullptr)
                     _begin.node = _begin.node->left;
-                __end.node = root;
-                while (__end.node->right != nullptr)
-                    __end.node = __end.node->right;
+                _end_.node = root;
+                while (_end_.node->right != nullptr)
+                    _end_.node = _end_.node->right;
             }
             return *this;
         }
@@ -676,7 +677,7 @@ namespace sjtu {
             Clear(root);
             root = nullptr;
             _size = 0;
-            _begin = __end = iterator(nullptr, this);
+            _begin = _end_ = iterator(nullptr, this);
         }
 
         /**
@@ -689,10 +690,13 @@ namespace sjtu {
             size_t origin = _size;
             iterator iter = Insert(value, root, nullptr, false);
             if (origin != _size) {
-                if (_begin.node == nullptr) _begin = __end = iter;
-                else if (Compare()(iter->first, _begin->first))
-                    _begin = iter;
-                else __end = iter;
+                if (_begin.node == nullptr) _begin = _end_ = iter;
+                else {
+                    if (Compare()(iter->first, _begin->first))
+                        _begin = iter;
+                    if (Compare()(_end_->first, iter->first))
+                        _end_ = iter;
+                }
             }
             return (origin == _size) ? pair<iterator, bool>(iter, false) : pair<iterator, bool>(iter, true);
         }
@@ -706,7 +710,7 @@ namespace sjtu {
             if (pos.node == nullptr || pos.tag != this) throw invalid_iterator();
             bool if_begin_changed = false, if__end_changed = false;
             if (pos == _begin) if_begin_changed = true;
-            if (pos == __end) if__end_changed = true;
+            if (pos == _end_) if__end_changed = true;
             Remove(pos.node->data.first, root);
             if (if_begin_changed) {
                 if (root == nullptr) {
@@ -718,11 +722,11 @@ namespace sjtu {
                 }
             }
             if (if__end_changed) {
-                if (if_begin_changed) __end = _begin;
+                if (if_begin_changed) _end_ = _begin;
                 else {
-                    __end.node = root;
-                    while (__end.node->right != nullptr)
-                        __end.node = __end.node->right;
+                    _end_.node = root;
+                    while (_end_.node->right != nullptr)
+                        _end_.node = _end_.node->right;
                 }
             }
         }
