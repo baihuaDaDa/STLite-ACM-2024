@@ -60,6 +60,9 @@ namespace sjtu {
 
         Node *root;
         size_t _size;
+        iterator _begin;
+        iterator _end;
+        iterator __end;
 
         // delete之后由于还有可能调用，需要将被delete的node置成nullptr
 
@@ -346,9 +349,7 @@ namespace sjtu {
                 if (node == nullptr) {
                     if (tag->empty()) throw invalid_iterator();
                     else {
-                        node = tag->root;
-                        while (node->right != nullptr)
-                            node = node->right;
+                        node = tag->__end.node;
                         return *this;
                     }
                 }
@@ -479,9 +480,7 @@ namespace sjtu {
                 if (node == nullptr) {
                     if (tag->empty()) throw invalid_iterator();
                     else {
-                        node = tag->root;
-                        while (node->right != nullptr)
-                            node = node->right;
+                        node = tag->__end.node;
                         return *this;
                     }
                 }
@@ -539,15 +538,23 @@ namespace sjtu {
         /**
          * TODO two constructors
          */
-        map() : root(nullptr), _size(0) {}
+        map() : root(nullptr), _size(0), _begin(iterator(nullptr, this)), __end(iterator(nullptr, this)), _end(iterator(nullptr, this)) {}
 
-        map(const map &other) : _size(other._size) {
-            if (other.root == nullptr) root = nullptr;
-            else {
+        map(const map &other) : _size(other._size), _end(iterator(nullptr, this)) {
+            if (other.root == nullptr) {
+                root = nullptr;
+                _begin = __end = iterator(nullptr, this);
+            } else {
                 root = new Node(other.root->data, nullptr);
                 root->height = other.root->height;
                 root->left = BuildTree(other.root->left, root);
                 root->right = BuildTree(other.root->right, root);
+                _begin.node = root;
+                while (_begin.node->left != nullptr)
+                    _begin.node = _begin.node->left;
+                __end.node = root;
+                while (__end.node->right != nullptr)
+                    __end.node = __end.node->right;
             }
         }
 
@@ -558,12 +565,21 @@ namespace sjtu {
             if (&other == this) return *this;
             Clear(root);
             _size = other._size;
-            if (other.root == nullptr) root = nullptr;
+            if (other.root == nullptr) {
+                root = nullptr;
+                _begin = __end = iterator(nullptr, this);
+            }
             else {
                 root = new Node(other.root->data, nullptr);
                 root->height = other.root->height;
                 root->left = BuildTree(other.root->left, root);
                 root->right = BuildTree(other.root->right, root);
+                _begin.node = root;
+                while (_begin.node->left != nullptr)
+                    _begin.node = _begin.node->left;
+                __end.node = root;
+                while (__end.node->right != nullptr)
+                    __end.node = __end.node->right;
             }
             return *this;
         }
@@ -619,19 +635,11 @@ namespace sjtu {
          * return a iterator to the beginning
          */
         iterator begin() {
-            if (root == nullptr) return iterator(nullptr, this);
-            Node *tmp = root;
-            while (tmp->left != nullptr)
-                tmp = tmp->left;
-            return iterator(tmp, this);
+            return _begin;
         }
 
         const_iterator cbegin() const {
-            if (root == nullptr) return const_iterator(nullptr, this);
-            const Node *tmp = root;
-            while (tmp->left != nullptr)
-                tmp = tmp->left;
-            return const_iterator(tmp, this);
+            return const_iterator(_begin);
         }
 
         /**
@@ -639,11 +647,11 @@ namespace sjtu {
          * in fact, it returns past-the-end.
          */
         iterator end() {
-            return iterator(nullptr, this);
+            return _end;
         }
 
         const_iterator cend() const {
-            return const_iterator(nullptr, this);
+            return const_iterator(_end);
         }
 
         /**
@@ -668,6 +676,7 @@ namespace sjtu {
             Clear(root);
             root = nullptr;
             _size = 0;
+            _begin = __end = iterator(nullptr, this);
         }
 
         /**
@@ -679,6 +688,12 @@ namespace sjtu {
         pair<iterator, bool> insert(const value_type &value) {
             size_t origin = _size;
             iterator iter = Insert(value, root, nullptr, false);
+            if (origin != _size) {
+                if (_begin.node == nullptr) _begin = __end = iter;
+                else if (Compare()(iter->first, _begin->first))
+                    _begin = iter;
+                else __end = iter;
+            }
             return (origin == _size) ? pair<iterator, bool>(iter, false) : pair<iterator, bool>(iter, true);
         }
 
@@ -689,7 +704,27 @@ namespace sjtu {
          */
         void erase(iterator pos) {
             if (pos.node == nullptr || pos.tag != this) throw invalid_iterator();
+            bool if_begin_changed = false, if__end_changed = false;
+            if (pos == _begin) if_begin_changed = true;
+            if (pos == __end) if__end_changed = true;
             Remove(pos.node->data.first, root);
+            if (if_begin_changed) {
+                if (root == nullptr) {
+                    _begin = iterator(nullptr, this);
+                } else {
+                    _begin.node = root;
+                    while (_begin.node->left != nullptr)
+                        _begin.node = _begin.node->left;
+                }
+            }
+            if (if__end_changed) {
+                if (if_begin_changed) __end = _begin;
+                else {
+                    __end.node = root;
+                    while (__end.node->right != nullptr)
+                        __end.node = __end.node->right;
+                }
+            }
         }
 
         /**
