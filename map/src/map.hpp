@@ -276,6 +276,10 @@ namespace sjtu {
 
     public:
         class iterator {
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            struct sorted_iterator_tag : public std::bidirectional_iterator_tag {};
+
         private:
             /**
              * TODO add data members
