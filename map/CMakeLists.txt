@@ -7,11 +7,11 @@ include_directories(data)
 include_directories(src)
 
 add_executable(map
-        test1.cpp
+        test2.cpp
         data/class-bint.hpp
         data/class-integer.hpp
         data/class-matrix.hpp
         src/exceptions.hpp
         src/map.hpp
         src/utility.hpp
-        src/bonus1.hpp)
+        src/bonus2.hpp)
