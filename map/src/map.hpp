@@ -408,6 +408,10 @@ namespace sjtu {
         class const_iterator {
             // it should has similar member method as iterator.
             //  and it should be able to construct from an iterator.
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            struct sorted_iterator_tag : public std::bidirectional_iterator_tag {};
+
         private:
             // data members.
             const Node *node;

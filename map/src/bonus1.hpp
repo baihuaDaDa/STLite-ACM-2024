@@ -4,6 +4,7 @@
 #include <iterator>
 #include <algorithm>
 #include <type_traits>
+#include <iostream>
 
 namespace sjtu {
 
@@ -12,7 +13,7 @@ namespace sjtu {
         typename _Iter::sorted_iterator_tag;
     };
 
-    template <typename _Iter>
+    template<typename _Iter>
     void my_sort(_Iter __first, _Iter __last) {
         // Your code here.
         // For random access iterator, use std::sort.
@@ -21,11 +22,13 @@ namespace sjtu {
         // You may use std::iterator_traits to get the iterator category.
         if constexpr (std::is_same_v<typename std::iterator_traits<_Iter>::iterator_category, std::random_access_iterator_tag>) {
             std::sort(__first, __last);
+            std::cout << "Successfully sorted!\n";
             return;
         } else if constexpr (is_sorted<_Iter>) {
+            std::cout << "Map is already sorted.\n";
             return;
         } else {
-            static_assert(false, "Not a random access iterator.");
+            static_assert(sizeof(_Iter) != sizeof(_Iter), "Not a random access iterator.");
         }
     }
 
