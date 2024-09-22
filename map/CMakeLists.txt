@@ -5,7 +5,7 @@ include_directories(corner_data)
 set(files_prefix "${CMAKE_CURRENT_SOURCE_DIR}/data")
 file(GLOB_RECURSE CPPs "${files_prefix}/**.cpp")
 
-string(REGEX REPLACE "^[A-Z]([a-zA-Z0-9:_-]*/)*" "" cata "${CMAKE_CURRENT_SOURCE_DIR}")
+string(REGEX REPLACE "/([a-zA-Z0-9:_-]*/)*" "" cata "${CMAKE_CURRENT_SOURCE_DIR}")
 
 foreach (cpp_file ${CPPs})
     string(REGEX REPLACE "/[a-zA-Z]*\\.cpp" "" fpath ${cpp_file})
